@@ -154,6 +154,7 @@ func (c *client) doDeleteRequest(action string, out interface{}) error {
 type baseResponse struct {
 	Error     bool   `json:"error"`
 	ErrorCode string `json:"errorCode"`
+	Response  string `json:"response"`
 }
 
 type token struct {

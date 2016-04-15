@@ -1,6 +1,7 @@
 package vpsie
 
 import (
+	"errors"
 	"net/url"
 	"time"
 )
@@ -18,6 +19,7 @@ type CreateVPSie struct {
 }
 
 type VPSie struct {
+	baseResponse
 	Id           string    `json:"vpsie_id"`
 	Name         string    `json:"name"`
 	Ram          int       `json:"ram"`
@@ -31,6 +33,7 @@ type VPSie struct {
 	Region       string    `json:"region"`
 	IpV4         string    `json:"ipv4"`
 	IpV6         string    `json:"ipv6"`
+	PublicIp     string    `json:"public_ip"`
 	PrivateIp    string    `json:"private_ip"`
 	CreatedOn    time.Time `json:"created_on"`
 	Status       string    `json:"status"`
@@ -60,7 +63,13 @@ func (c *client) CreateVPSie(create CreateVPSie) (VPSie, error) {
 	}
 
 	out := VPSie{}
-	return out, c.doPostRequest("vpsie", in, &out)
+	if err := c.doPostRequest("vpsie", in, &out); err != nil {
+		return VPSie{}, err
+	} else if out.Error {
+		return VPSie{}, errors.New(out.Response)
+	} else {
+		return out, nil
+	}
 }
 
 type VPSiesResponse struct {
@@ -80,17 +89,37 @@ type VPSieStatusResponse struct {
 
 func (c *client) DeleteVPSie(id string) (string, error) {
 	out := VPSieStatusResponse{}
-	return out.Status, c.doDeleteRequest("vpsie/"+id, &out)
+	if err := c.doDeleteRequest("vpsie/"+id, &out); err != nil {
+		return "", err
+	} else if out.Error {
+		return "", errors.New(out.ErrorCode)
+	}
+	return out.Status, nil
+}
+
+type GetVPSieResponse struct {
+	baseResponse
+	VPSie VPSie `json:"vpsie"`
 }
 
 func (c *client) GetVPSie(id string) (VPSie, error) {
-	out := VPSie{}
-	return out, c.doGetRequest("vpsie/"+id, &out)
+	out := GetVPSieResponse{}
+	if err := c.doGetRequest("vpsie/"+id, &out); err != nil {
+		return VPSie{}, err
+	} else if out.Error {
+		return VPSie{}, errors.New(out.ErrorCode + out.Response)
+	}
+	return out.VPSie, nil
 }
 
 func (c *client) StartVPSie(id string) (string, error) {
 	out := VPSieStatusResponse{}
-	return out.Status, c.doPostRequest("vpsie/start/"+id, nil, &out)
+	if err := c.doPostRequest("vpsie/start/"+id, nil, &out); err != nil {
+		return "", err
+	} else if out.Error {
+		return "", errors.New(out.ErrorCode)
+	}
+	return out.Status, nil
 }
 
 type VPSieActionResponse struct {
@@ -107,7 +136,12 @@ func (c *client) ShutdownVPSie(id string) (VPSieActionResponse, error) {
 
 func (c *client) RestartVPSie(id string) (string, error) {
 	out := VPSieStatusResponse{}
-	return out.Status, c.doPostRequest("vpsie/restart/"+id, nil, &out)
+	if err := c.doPostRequest("vpsie/restart/"+id, nil, &out); err != nil {
+		return "", err
+	} else if out.Error {
+		return "", errors.New(out.ErrorCode)
+	}
+	return out.Status, nil
 }
 
 func (c *client) ForceRestartVPSie(id string) (string, error) {
